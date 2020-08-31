@@ -4,7 +4,11 @@ from _routines import ffi, lib
 from threading import Thread, Lock
 
 
-def julia(width, height, center, zoom, theta, phi, a, b, c, max_iter, color_map, anti_aliasing=2, x_scale=1.0, u_scale=1.0, v_scale=0.005, u_samples=1024, v_samples=4):
+def julia(
+    width, height, center, zoom, theta, phi,
+    a, b, c, max_iter, color_map,
+    anti_aliasing=2, x_scale=1.0, u_scale=1.0, v_scale=0.005, u_samples=1024, v_samples=4,
+    pseudo_mandelbrot=False, coloring=1, bg_luminance=0.2, attenuation=1.0):
     lock = Lock()
 
     num_color_channels = 3
@@ -12,10 +16,10 @@ def julia(width, height, center, zoom, theta, phi, a, b, c, max_iter, color_map,
 
     zoom = 2**-zoom
 
-    u_min = -u_scale * zoom
-    v_min = -v_scale * zoom
-    u_delta = 2*u_scale*zoom / u_samples
-    v_delta = 2*v_scale*zoom / v_samples
+    u_max = u_scale * zoom
+    v_max = v_scale * zoom
+    u_delta = -2*u_scale*zoom / u_samples
+    v_delta = -2*v_scale*zoom / v_samples
     def accumulate_subpixels(offset_x, offset_y):
         nonlocal result
 
@@ -26,10 +30,10 @@ def julia(width, height, center, zoom, theta, phi, a, b, c, max_iter, color_map,
 
         x, y = np.meshgrid(x, y)
 
-        qw = center.w + x*cos(theta) + u_min*sin(theta)
-        qx = center.x + u_min*cos(theta) - x*sin(theta)
-        qy = center.y + y*cos(phi) + v_min*sin(phi)
-        qz = center.z + v_min*cos(phi) - y*sin(phi)
+        qw = center.w + x*cos(theta) + u_max*sin(theta)
+        qx = center.x + u_max*cos(theta) - x*sin(theta)
+        qy = center.y + y*cos(phi) + v_max*sin(phi)
+        qz = center.z + v_max*cos(phi) - y*sin(phi)
 
         uw = sin(theta) * u_delta
         ux = cos(theta) * u_delta
@@ -57,7 +61,8 @@ def julia(width, height, center, zoom, theta, phi, a, b, c, max_iter, color_map,
             a.w, a.x, a.y, a.z,
             b.w, b.x, b.y, b.z,
             c.w, c.x, c.y, c.z,
-            max_iter,
+            max_iter, pseudo_mandelbrot, coloring,
+            bg_luminance, attenuation
         )
 
         subpixel_image = color_map(area, red, green, blue)
