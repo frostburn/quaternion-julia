@@ -3,7 +3,22 @@ from cffi import FFI
 ffibuilder = FFI()
 
 ffibuilder.cdef(
-    """void julia(
+    """
+    int julia_eval(
+        double qw, double qx, double qy, double qz,
+        double dw, double dx, double dy, double dz,
+        double ex, double ey, double ez,
+        double cw, double cx, double cy, double cz,
+        int max_iterations
+    );
+    double smooth_julia_eval(
+        double qw, double qx, double qy, double qz,
+        double dw, double dx, double dy, double dz,
+        double ex, double ey, double ez,
+        double cw, double cx, double cy, double cz,
+        int max_iterations
+    );
+    void julia(
         double *in_w_out_area, double *in_x_out_red, double *in_y_out_green, double *in_z_out_blue, int num_samples,
         double uw, double ux, double uy, double uz, int u_samples,
         double vw, double vx, double vy, double vz, int v_samples,
@@ -18,7 +33,7 @@ ffibuilder.cdef(
 ffibuilder.set_source(
     "_routines",
     """
-    int eval(
+    int julia_eval(
         double qw, double qx, double qy, double qz,
         double dw, double dx, double dy, double dz,
         double ex, double ey, double ez,
@@ -47,6 +62,38 @@ ffibuilder.set_source(
             qz = sw*fz + sz*fw + sx*ey - sy*ex + cz;
         }
         return i;
+    }
+
+    double smooth_julia_eval(
+        double qw, double qx, double qy, double qz,
+        double dw, double dx, double dy, double dz,
+        double ex, double ey, double ez,
+        double cw, double cx, double cy, double cz,
+        int max_iterations
+    ) {
+        int i;
+        for (i = 0; i < max_iterations; ++i) {
+            double r = qw*qw + qx*qx + qy*qy + qz*qz;
+            if (r > 256) {
+                return log(log(r)*0.5)*1.4426950408889634 - i + max_iterations - 2.4712336270551021;
+            }
+
+            double sw = qw;
+            double sx = qx;
+            double sy = qy;
+            double sz = qz;
+
+            double fw = qw + dw;
+            double fx = qx + dx;
+            double fy = qy + dy;
+            double fz = qz + dz;
+
+            qw = sw*fw - sx*fx - sy*fy - sz*fz + cw;
+            qx = sw*fx + sx*fw + sy*ez - sz*ey + cx;
+            qy = sw*fy + sy*fw - sx*ez + sz*ex + cy;
+            qz = sw*fz + sz*fw + sx*ey - sy*ex + cz;
+        }
+        return 0;
     }
 
     void julia(
@@ -85,7 +132,7 @@ ffibuilder.set_source(
                 for (int k = 0; k < v_samples; ++k) {
                     int iterations;
                     if (pseudo_mandelbrot) {
-                        iterations = eval(
+                        iterations = julia_eval(
                             cw, cx, cy, cz,
                             dw, dx, dy, dz,
                             ex, ey, ez,
@@ -96,7 +143,7 @@ ffibuilder.set_source(
                             max_iterations
                         );
                     } else {
-                        iterations = eval(
+                        iterations = julia_eval(
                             in_w_out_area[i] + uw*j + vw*k,
                             in_x_out_red[i] + ux*j + vx*k,
                             in_y_out_green[i] + uy*j + vy*k,
