@@ -27,7 +27,13 @@ ffibuilder.cdef(
         double cw, double cx, double cy, double cz,
         int max_iterations, int pseudo_mandelbrot, int coloring,
         double coloring_param_a, double coloring_param_b
-    );"""
+    );
+    void smooth_julia(
+        double *q, double *a, double *b, double *c,
+        double *out,
+        int max_iterations, int num_samples
+    );
+    """
 )
 
 ffibuilder.set_source(
@@ -75,7 +81,7 @@ ffibuilder.set_source(
         for (i = 0; i < max_iterations; ++i) {
             double r = qw*qw + qx*qx + qy*qy + qz*qz;
             if (r > 256) {
-                return log(log(r)*0.5)*1.4426950408889634 - i + max_iterations - 2.4712336270551021;
+                return log(log(r))*1.4426950408889634 - i + max_iterations - 3.4712336270551021;
             }
 
             double sw = qw;
@@ -94,6 +100,26 @@ ffibuilder.set_source(
             qz = sw*fz + sz*fw + sx*ey - sy*ex + cz;
         }
         return 0;
+    }
+
+    void smooth_julia(
+        double *q, double *a, double *b, double *c,
+        double *out,
+        int max_iterations, int num_samples
+    ) {
+        for (int i = 0; i < num_samples; ++i) {
+            int w = 4*i;
+            int x = w + 1;
+            int y = w + 2;
+            int z = w + 3;
+            out[i] = smooth_julia_eval(
+                q[w], q[x], q[y], q[z],
+                a[w] + b[w], a[x] + b[x], a[y] + b[y], a[z] + b[z],
+                a[x] - b[x], a[y] - b[y], a[z] - b[z],
+                c[w], c[x], c[y], c[z],
+                max_iterations
+            );
+        }
     }
 
     void julia(

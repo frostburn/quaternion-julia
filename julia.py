@@ -1,7 +1,105 @@
 import numpy as np
-from numpy import sin, cos
+from numpy import sin, cos, log
 from _routines import ffi, lib
 from threading import Thread, Lock
+
+
+def basic_eval(q, a, b, c, max_iter, shape=None):
+    if shape is None:
+        for z in (q, a, b, c):
+            if hasattr(z, 'shape'):
+                if shape is None:
+                    shape = z.shape
+                if shape == ():
+                    shape = z.shape
+    # Upshape and make unique
+    z = np.zeros(shape)
+    q = q + z
+    a = a + z
+    b = b + z
+    c = c + z
+
+    result = z
+    q_buf = ffi.cast("double*", q.ctypes.data)
+    a_buf = ffi.cast("double*", a.ctypes.data)
+    b_buf = ffi.cast("double*", b.ctypes.data)
+    c_buf = ffi.cast("double*", c.ctypes.data)
+    result_buf = ffi.cast("double*", result.ctypes.data)
+
+    lib.smooth_julia(
+        q_buf, a_buf, b_buf, c_buf,
+        result_buf, max_iter,
+        result.size
+    )
+
+    return result
+
+
+def advanced_eval(q, a, b, c, d, e, f, g, max_iter, exponent=2, shape=None):
+    if shape is None:
+        for z in (q, a, b, c, d, e, f, g):
+            if hasattr(z, 'shape'):
+                if shape is None:
+                    shape = z.shape
+                if shape == ():
+                    shape = z.shape
+    bailout = 256
+    base = 1 / log(exponent)
+    offset = max_iter - 1 - log(log(bailout)) * base
+    result = -np.ones(shape)
+    # Upshape and make unique
+    z = np.zeros(shape)
+    q = q + z
+    a = a + z
+    b = b + z
+    c = c + z
+    d = d + z
+    e = e + z
+    f = f + z
+    g = g + z
+    for i in range(max_iter):
+        r = abs(q)
+        result[np.logical_and(result < 0, r > bailout)] = i
+        s = (r <= bailout)
+        z = q[s]
+        q[s] = z**exponent + z*a[s] + b[s]*z + c[s] + z*d[s]*z + z*e[s]/z + f[s]*z*z + z*z*g[s]
+    inside = (result < 0)
+    result[~inside] = log(log(abs(q[~inside]))) - result[~inside] + offset
+    result[inside] = 0
+    return result
+
+
+def second_order_eval(q0, q1, a, b, c, d, max_iter, exponent=2, shape=None):
+    if shape is None:
+        for z in (q0, q1, a, b, c, d):
+            if hasattr(z, 'shape'):
+                if shape is None:
+                    shape = z.shape
+                if shape == ():
+                    shape = z.shape
+    bailout = 256
+    base = 1 / log(exponent)
+    offset = max_iter - 1 - log(log(bailout)) * base
+    result = -np.ones(shape)
+    # Upshape and make unique
+    z = np.zeros(shape)
+    q0 = q0 + z
+    q1 = q1 + z
+    a = a + z
+    b = b + z
+    c = c + z
+    d = d + z
+    for i in range(max_iter):
+        r = abs(q0)
+        result[np.logical_and(result < 0, r > bailout)] = i
+        s = (r <= bailout)
+        temp = q0[s] + 0
+        q0[s] = q0[s]**exponent + q0[s]*d[s]*q1[s] + q1[s]*a[s] + b[s]*q0[s] + c[s]
+        q1[s] = temp
+    inside = (result < 0)
+    result[~inside] = log(log(abs(q0[~inside]))) - result[~inside] + offset
+    result[inside] = 0
+    return result
 
 
 def julia(
