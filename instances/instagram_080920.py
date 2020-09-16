@@ -15,7 +15,7 @@ if __name__ == '__main__':
     u_samples = 2**12
     theta = 0.4
     anti_aliasing = 4
-    max_iter = 22
+    max_iter = 23
 
     grid_x = linspace(-0.7, 1.5, scale*108)
     grid_y = linspace(-1.6, 1, scale*108)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         blue = ones(x.shape) * 9.0
         for w in z:
             q = x * np.quaternion(cos(theta), 0, sin(theta), 0) + y * np.quaternion(0, 1, 0, 0) + w * np.quaternion(-sin(theta), 0, cos(theta), 0)
-            val = basic_eval(c + q*np.quaternion(0, 0, 0, 0.2)/q, a - 0.2*q*q, b + 0.2*q, q, 23)
+            val = basic_eval(c + q*np.quaternion(0, 0, 0, 0.2)/q, a - 0.2*q*q, b + 0.2*q, q, max_iter)
             core = (val == 0)
             absorption = 3*exp(-0.25*val)
             absorption[core] = 5
