@@ -2,6 +2,7 @@ import numpy as np
 from numpy import sin, cos, log
 from _routines import ffi, lib
 from threading import Thread, Lock
+import quaternion
 
 
 def basic_eval(q, a, b, c, max_iter, shape=None):
@@ -181,3 +182,22 @@ def julia(
     result /= anti_aliasing**2
 
     return result
+
+
+def biaxial_eval(q, c0, c1, exponent0, exponent1, max_iter):
+    escaped = -np.ones(q.shape)
+    for i in range(max_iter):
+        escaped[np.logical_and(escaped < 0, abs(q) >= 128)] = i
+        s = escaped < 0
+        if i % 2:
+            q[s] = (q[s]*quaternion.x)**exponent1*(-quaternion.x) + c1
+        else:
+            q[s] = q[s]**exponent0 + c0
+
+    exponent = max(exponent0, exponent1)
+
+    s = escaped > 0
+    escaped[s] = np.log(np.log(abs(q[s]))) / np.log(exponent) - escaped[s] + max_iter - 1 - np.log(np.log(128)) / np.log(exponent)
+    escaped[~s] = 0
+
+    return escaped

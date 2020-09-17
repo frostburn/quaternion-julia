@@ -1,5 +1,9 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
+
 from pylab import *
-from julia import advanced_eval, second_order_eval, basic_eval, biaxial_eval
+from julia import advanced_eval, second_order_eval, basic_eval
 from render_image import make_picture_frame
 import numpy as np
 import quaternion
@@ -8,33 +12,39 @@ from density import illuminate_and_absorb
 
 if __name__ == '__main__':
     scale = 10
-    u_samples = 1<<9
+    u_samples = 1<<11
     theta = 0.1
     phi = 0.1
     gamma = 0.2
     beta = -0.1
     anti_aliasing = 4
-    max_iter = 15
-    zoom = -0.5
+    max_iter = 20
+    zoom = -1.5
     width = 108*scale
     height = 108*scale
     depth = u_samples
     du = 1.0 / u_samples
 
-    np.random.seed(17)
-    c0 = np.quaternion(*np.random.randn(4)) * 0.28
-    c1 = np.quaternion(*np.random.randn(4)) * 0.25
-
-    exponent0 = 3
-    exponent1 = 5
+    np.random.seed(16)
+    a = np.quaternion(*np.random.randn(4)) * 0.25
+    b = np.quaternion(*np.random.randn(4)) * 0.25
+    c = np.quaternion(*np.random.randn(4)) * 0.29
 
     def source(q):
-        val = biaxial_eval(q, c0, c1, exponent0, exponent1, max_iter)
-        core = (val == 0)
-        illumination = exp(-0.3*val)
+        result = ones(q.shape)*1e100
+
+        for _ in range(max_iter):
+            z = 1.0/q
+            q = z*z + z*a + b*z + c
+            result = minimum(result, abs(q))
+
+        field = result - 0.3
+        core = field < 0
+
+        illumination = exp(-field*50)
         illumination = array([illumination, illumination*0.5, illumination*0.2]) * 20
         illumination[:, core] = 0
-        absorption = array([core, 2*core, core]) * 80
+        absorption = array([core, 2*core, core]) * 100
         return illumination, absorption
 
     def generate_subpixel_image(offset_x, offset_y):
