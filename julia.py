@@ -201,3 +201,25 @@ def biaxial_eval(q, c0, c1, exponent0, exponent1, max_iter):
     escaped[~s] = 0
 
     return escaped
+
+
+def x_root_mandelbrot_eval(q, c, max_iter):
+    c = c + q*0
+    escaped = -np.ones(q.shape)
+    for i in range(max_iter):
+        escaped[np.logical_and(escaped < 0, abs(q) >= 128)] = i
+        s = escaped < 0
+        if s.any():
+            centroid = (q[s]-1)*q[s]*(-q[s]-1)
+            x = (
+                (quaternion.x*q[s]-1)*centroid*(-quaternion.x*q[s]-1) +
+                (-quaternion.x*q[s]-1)*centroid*(quaternion.x*q[s]-1)
+            ) * 0.5
+            q[s] = x - q[s] + c[s]
+
+    exponent = 5
+    s = escaped > 0
+    escaped[s] = np.log(np.log(abs(q[s]))) / np.log(exponent) - escaped[s] + max_iter - 1 - np.log(np.log(128)) / np.log(exponent)
+    escaped[~s] = 0
+
+    return escaped
