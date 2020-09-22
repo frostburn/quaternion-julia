@@ -223,3 +223,24 @@ def x_root_mandelbrot_eval(q, c, max_iter):
     escaped[~s] = 0
 
     return escaped
+
+
+def tesseract(q, c, max_iter, exponent=5, sign=-1, counter_exponent=-1):
+    c = c + q*0
+    x = quaternion.x**counter_exponent
+    y = quaternion.y**counter_exponent
+    z = quaternion.z**counter_exponent
+    escaped = -np.ones(q.shape)
+    for i in range(max_iter):
+        escaped[np.logical_and(escaped < 0, abs(q) >= 128)] = i
+        s = escaped < 0
+        if s.any():
+            p = q[s]
+            base = (p**exponent + (p*quaternion.x)**exponent*x + (p*quaternion.y)**exponent*y + (p*quaternion.z)**exponent*z ) / 4.0
+            q[s] = base*sign + c[s]
+
+    s = escaped > 0
+    escaped[s] = np.log(np.log(abs(q[s]))) / np.log(exponent) - escaped[s] + max_iter - 1 - np.log(np.log(128)) / np.log(exponent)
+    escaped[~s] = 0
+
+    return escaped
