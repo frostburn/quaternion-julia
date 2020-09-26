@@ -68,6 +68,49 @@ def pentatope():
     ])
 
 
+def pentatope_v2():
+    """
+    Vertices of the 5-cell
+
+    Alternative construction
+    """
+    vertices = np.array([
+        np.quaternion(2, 0, 0, 0),
+        np.quaternion(0, 2, 0, 0),
+        np.quaternion(0, 0, 2, 0),
+        np.quaternion(0, 0, 0, 2),
+        np.quaternion(phi, phi, phi, phi),
+    ])
+    vertices -= np.quaternion(2+phi, 2+phi, 2+phi, 2+phi) / 5.0
+    vertices /= abs(vertices)
+    return vertices
+
+
+def pentatope_rotors():
+    """
+    Symmetries of the 5-cell
+
+    The result is two copies of the tetraplex of opposing chirality
+    """
+    spin = np.quaternion(0.5, 0.5, 0.5, 0.5)
+    flip_left = np.quaternion(0.5, 0.5*phi, 0.5/phi, 0)
+    flip_right = np.quaternion(0.5, 0.5/phi, 0.5*phi, 0)
+
+    lefts = [spin, flip_left]
+    rights = [1/spin, flip_right]
+
+    for _ in range(4):
+        ls = lefts[:]
+        rs = rights[:]
+        for l1, r1 in zip(ls, rs):
+            for l2, r2 in zip(ls, rs):
+                if not contains(lefts, l1*l2):
+                    lefts.append(l1*l2)
+                    rights.append(r2*r1)
+
+    return list(zip(lefts, rights))
+
+
 def orthoplex(positive=True):
     """
     Vertices of the 16-cell
@@ -109,7 +152,7 @@ def octaplex(positive=True):
     return np.concatenate((orthoplex(positive), tesseract(positive)))
 
 
-def snub_octaplex(positive=True):
+def snub_octaplex(positive=True, left=True):
     """
     Vertices of a snub 24-cell
     """
@@ -117,7 +160,10 @@ def snub_octaplex(positive=True):
     for a in [0.5*phi, -0.5*phi]:
         for b in [0.5/phi, -0.5/phi]:
             for c in [0.5, -0.5]:
-                vertices.extend(even_permutations(a, b, c, 0))
+                if left:
+                    vertices.extend(even_permutations(a, b, c, 0))
+                else:
+                    vertices.extend(even_permutations(b, a, c, 0))
     if positive:
         for v in vertices[:]:
             if v.w < 0:

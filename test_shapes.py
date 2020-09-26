@@ -3,12 +3,27 @@ import quaternion
 from shapes import *
 
 
+def test_pentatope_centered():
+    for vertices in [pentatope(), pentatope_v2()]:
+        assert (np.isclose(0, abs(sum(vertices))))
+
+
 def test_pentatope_equidistance():
+    for vertices in [pentatope(), pentatope_v2()]:
+        for v1 in vertices:
+            for v2 in vertices:
+                d = abs(v1 - v2)
+                assert (d == 0 or np.isclose(d, np.sqrt(2.5)))
+
+
+def test_pentatope_symmetry():
+    symmetry = pentatope_rotors()
+    assert (len(symmetry) == 120)
+
     vertices = pentatope()
-    for v1 in vertices:
-        for v2 in vertices:
-            d = abs(v1 - v2)
-            assert (d == 0 or np.isclose(d, np.sqrt(2.5)))
+    for v in vertices:
+        for left, right in symmetry:
+            assert (contains(vertices, left*v*right))
 
 
 def test_orthoplex_closed():
@@ -21,9 +36,11 @@ def test_orthoplex_closed():
 def test_tesseract_symmetry():
     vertices = tesseract(False)
     symmetry = orthoplex(False)
+    twist = [1, np.quaternion(0.5**0.5, 0.5**0.5, 0, 0)]
     for v in vertices:
         for s in symmetry:
-            assert (contains(vertices, v*s))
+            for t in twist:
+                assert (contains(vertices, t*v*s/t))
 
 
 def test_tesseract_in_octaplex():
